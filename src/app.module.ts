@@ -6,6 +6,8 @@ import { AppService } from './app.service';
 import { ContactsModule } from './contacts/contacts.module';
 import { ConsultationsModule } from './consultations/consultations.module';
 import { UniversitiesModule } from './universities/universities.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { SuccessStoriesModule } from './success-stories/success-stories.module';
 import { mongooseConfig } from './config/mongoose.config';
 
 @Module({
@@ -18,6 +20,8 @@ import { mongooseConfig } from './config/mongoose.config';
     ContactsModule,
     ConsultationsModule,
     UniversitiesModule,
+    ReviewsModule,
+    SuccessStoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
