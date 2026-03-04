@@ -40,6 +40,14 @@ export class Contact extends Document {
   message!: string;
 
   @ApiProperty({
+    example: '3.75',
+    description: 'CGPA of the applicant',
+    required: false,
+  })
+  @Prop({ required: false })
+  cgpa?: string;
+
+  @ApiProperty({
     enum: ['active', 'inactive', 'pending'],
     example: 'active',
     description: 'Status of the contact',

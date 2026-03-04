@@ -70,4 +70,14 @@ export class UpdateContactDto {
   @IsOptional()
   @IsEnum(['active', 'inactive', 'pending'])
   status?: string;
+
+  @ApiProperty({
+    example: '3.75',
+    description: 'CGPA of the applicant',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  cgpa?: string;
 }
