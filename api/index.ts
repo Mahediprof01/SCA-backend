@@ -18,7 +18,7 @@ async function bootstrap() {
         'http://127.0.0.1:3001',
         'https://student-abroad.vercel.app',
         'https://sca-backend.vercel.app',
-        /\.vercel\.app$/
+        /\.vercel\.app$/,
       ],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
