@@ -9,10 +9,11 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -26,15 +27,16 @@ import { UniversitiesService } from './universities.service';
 import { CreateUniversityDto } from './dto/create-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
 import { University } from './schemas/university.schema';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @ApiTags('Universities')
 @Controller('universities')
 export class UniversitiesController {
-  constructor(private readonly universitiesService: UniversitiesService) {}
+  constructor(
+    private readonly universitiesService: UniversitiesService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
-  /**
-   * Create a new university
-   */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new university' })
@@ -60,9 +62,6 @@ export class UniversitiesController {
     return this.universitiesService.create(createUniversityDto);
   }
 
-  /**
-   * Get university statistics
-   */
   @Get('stats/overview')
   @ApiOperation({ summary: 'Get university statistics' })
   @ApiResponse({
@@ -83,9 +82,6 @@ export class UniversitiesController {
     return this.universitiesService.getStatistics();
   }
 
-  /**
-   * Get all active universities (public endpoint, no pagination)
-   */
   @Get('public')
   @ApiOperation({ summary: 'Get all active universities for public site' })
   @ApiResponse({
@@ -96,9 +92,6 @@ export class UniversitiesController {
     return this.universitiesService.findAllActive();
   }
 
-  /**
-   * Get all universities with pagination and filtering
-   */
   @Get()
   @ApiOperation({ summary: 'Get all universities with pagination and filtering' })
   @ApiQuery({
@@ -143,9 +136,6 @@ export class UniversitiesController {
     return this.universitiesService.findAll(status, country, search, page, limit);
   }
 
-  /**
-   * Get a single university by ID
-   */
   @Get(':id')
   @ApiOperation({ summary: 'Get a single university by ID' })
   @ApiParam({
@@ -163,9 +153,6 @@ export class UniversitiesController {
     return this.universitiesService.findOne(id);
   }
 
-  /**
-   * Update a university
-   */
   @Put(':id')
   @ApiOperation({ summary: 'Update a university' })
   @ApiParam({
@@ -197,9 +184,6 @@ export class UniversitiesController {
     return this.universitiesService.update(id, updateUniversityDto);
   }
 
-  /**
-   * Delete a university
-   */
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a university' })

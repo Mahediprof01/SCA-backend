@@ -5,6 +5,7 @@ import {
   IsPhoneNumber,
   IsNotEmpty,
   IsEnum,
+  IsOptional,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -55,4 +56,14 @@ export class CreateContactDto {
   @MinLength(10)
   @MaxLength(5000)
   message!: string;
+
+  @ApiProperty({
+    example: '3.75',
+    description: 'CGPA of the applicant',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  cgpa?: string;
 }

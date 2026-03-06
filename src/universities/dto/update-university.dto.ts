@@ -11,7 +11,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class UpdateUniversityDto {
   @ApiProperty({ example: 'Seoul National University', required: false })
@@ -81,19 +81,38 @@ export class UpdateUniversityDto {
   @IsOptional()
   phone?: string;
 
-  @ApiProperty({ example: 'https://images.unsplash.com/...', required: false })
-  @IsString()
+  @ApiProperty({ example: 'https://example.com/image.jpg', required: false })
   @IsOptional()
   image?: string;
 
   @ApiProperty({ example: ['Computer Science', 'Engineering'], required: false })
-  @IsArray()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return undefined;
+      }
+    }
+    return value;
+  })
+  @IsArray({ message: 'programs must be an array' })
   @IsString({ each: true })
   @IsOptional()
   programs?: string[];
 
   @ApiProperty({ example: ['Library', 'Labs'], required: false })
-  @IsArray()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return undefined;
+      }
+    }
+    return value;
+  })
+  @IsArray({ message: 'facilities must be an array' })
   @IsString({ each: true })
   @IsOptional()
   facilities?: string[];
