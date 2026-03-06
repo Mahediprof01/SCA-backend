@@ -1,19 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
 import { ApiProperty } from '@nestjs/swagger';
+import { Document } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class SuccessStory extends Document {
   @ApiProperty({ enum: ['image', 'video'], example: 'image' })
-  @Prop({ required: true, enum: ['image', 'video'] })
-  type!: string;
+  @Prop({ enum: ['image', 'video'], required: true })
+  type!: 'image' | 'video';
 
   @ApiProperty({ example: 'Visa Approved!', required: false })
-  @Prop()
+  @Prop({ trim: true })
   title?: string;
 
   @ApiProperty({ example: 'Student got visa to study in South Korea.', required: false })
-  @Prop()
+  @Prop({ trim: true })
   description?: string;
 
   @ApiProperty({ example: 'https://res.cloudinary.com/...', required: false })
@@ -26,7 +26,7 @@ export class SuccessStory extends Document {
 
   @ApiProperty({ enum: ['active', 'inactive'], example: 'active' })
   @Prop({ enum: ['active', 'inactive'], default: 'active' })
-  status!: string;
+  status!: 'active' | 'inactive';
 
   @ApiProperty()
   createdAt!: Date;

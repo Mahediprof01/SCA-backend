@@ -5,10 +5,9 @@ import { ReviewsService } from './reviews.service';
 import { Review, ReviewSchema } from './schemas/review.schema';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([{ name: Review.name, schema: ReviewSchema }]),
-  ],
+  imports: [MongooseModule.forFeature([{ name: Review.name, schema: ReviewSchema }])],
   controllers: [ReviewsController],
   providers: [ReviewsService],
+  exports: [ReviewsService],
 })
 export class ReviewsModule {}

@@ -1,48 +1,35 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { SuccessStory } from './schemas/success-story.schema';
 import { CreateSuccessStoryDto } from './dto/create-success-story.dto';
 import { UpdateSuccessStoryDto } from './dto/update-success-story.dto';
+import { SuccessStory } from './schemas/success-story.schema';
 
 @Injectable()
 export class SuccessStoriesService {
   constructor(
-    @InjectModel(SuccessStory.name) private successStoryModel: Model<SuccessStory>,
+    @InjectModel(SuccessStory.name)
+    private readonly successStoryModel: Model<SuccessStory>,
   ) {}
 
-  async create(data: any): Promise<SuccessStory> {
-    const story = new this.successStoryModel(data);
-    return await story.save();
+  async create(dto: CreateSuccessStoryDto): Promise<SuccessStory> {
+    const story = new this.successStoryModel({
+      ...dto,
+      status: dto.status ?? 'active',
+    });
+    return story.save();
   }
 
-  async findAll(
-    type?: string,
-    status?: string,
-    page: number = 1,
-    limit: number = 50,
-  ): Promise<{ data: SuccessStory[]; total: number; page: number; limit: number }> {
-    const query: any = {};
+  async findAll(type?: string, status?: string): Promise<{ data: SuccessStory[]; total: number }> {
+    const query: Record<string, unknown> = {};
     if (type) query.type = type;
     if (status) query.status = status;
-
-    const skip = (page - 1) * limit;
-    const total = await this.successStoryModel.countDocuments(query);
-    const data = await this.successStoryModel
-      .find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .exec();
-
-    return { data, total, page, limit };
+    const data = await this.successStoryModel.find(query).sort({ createdAt: -1 }).exec();
+    return { data, total: data.length };
   }
 
-  async findAllPublic(): Promise<SuccessStory[]> {
-    return this.successStoryModel
-      .find({ status: 'active' })
-      .sort({ createdAt: -1 })
-      .exec();
+  async findPublic(): Promise<SuccessStory[]> {
+    return this.successStoryModel.find({ status: 'active' }).sort({ createdAt: -1 }).exec();
   }
 
   async findOne(id: string): Promise<SuccessStory> {

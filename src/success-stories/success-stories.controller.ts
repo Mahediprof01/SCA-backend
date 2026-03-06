@@ -1,116 +1,74 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Param,
-  Put,
+  Controller,
   Delete,
-  Query,
+  Get,
   HttpCode,
   HttpStatus,
-  UseInterceptors,
+  Param,
+  Post,
+  Put,
+  Query,
   UploadedFile,
-  ValidationPipe,
-  Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { SuccessStoriesService } from './success-stories.service';
+import { memoryStorage } from 'multer';
 import { CreateSuccessStoryDto } from './dto/create-success-story.dto';
 import { UpdateSuccessStoryDto } from './dto/update-success-story.dto';
 import { SuccessStory } from './schemas/success-story.schema';
-import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { SuccessStoriesService } from './success-stories.service';
 
-@ApiTags('Success Stories')
 @Controller('success-stories')
 export class SuccessStoriesController {
-  constructor(
-    private readonly successStoriesService: SuccessStoriesService,
-    private readonly cloudinaryService: CloudinaryService,
-  ) {}
+  constructor(private readonly successStoriesService: SuccessStoriesService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('image'))
-  @ApiOperation({ summary: 'Create a success story (image or video)' })
-  @ApiResponse({ status: 201, description: 'Created successfully' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   async create(
-    @Body(new ValidationPipe({ transform: true, skipMissingProperties: true }))
-    dto: CreateSuccessStoryDto,
-    @UploadedFile() file?: any,
-    @Req() req?: any,
+    @Body() body: CreateSuccessStoryDto,
+    @UploadedFile() image?: { mimetype: string; buffer: Buffer },
   ): Promise<SuccessStory> {
-    const payload: any = { ...dto };
+    const payload: CreateSuccessStoryDto = { ...body };
 
-    // Handle empty image object from multipart parsing
-    if (payload.image && typeof payload.image === 'object' && Object.keys(payload.image).length === 0) {
-      delete payload.image;
+    if (image) {
+      payload.imageUrl = `data:${image.mimetype};base64,${image.buffer.toString('base64')}`;
     }
 
-    const uploadFile = file || req?.file;
-    if (uploadFile) {
-      payload.imageUrl = await this.cloudinaryService.uploadImage(uploadFile, 'success-stories');
-    }
+    if (payload.type === 'video') payload.imageUrl = undefined;
+    if (payload.type === 'image') payload.videoUrl = undefined;
 
     return this.successStoriesService.create(payload);
   }
 
   @Get('public')
-  @ApiOperation({ summary: 'Get all active success stories (public)' })
-  async findAllPublic(): Promise<SuccessStory[]> {
-    return this.successStoriesService.findAllPublic();
+  async findPublic(): Promise<SuccessStory[]> {
+    return this.successStoriesService.findPublic();
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all success stories (admin)' })
-  @ApiQuery({ name: 'type', required: false, enum: ['image', 'video'] })
-  @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
-  async findAll(
-    @Query('type') type?: string,
-    @Query('status') status?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
-    return this.successStoriesService.findAll(
-      type,
-      status,
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 50,
-    );
+  async findAll(@Query('type') type?: string, @Query('status') status?: string) {
+    return this.successStoriesService.findAll(type, status);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a success story by ID' })
   async findOne(@Param('id') id: string): Promise<SuccessStory> {
     return this.successStoriesService.findOne(id);
   }
 
   @Put(':id')
-  @UseInterceptors(FileInterceptor('image'))
-  @ApiOperation({ summary: 'Update a success story' })
-  async update(
-    @Param('id') id: string,
-    @Body(new ValidationPipe({ transform: true, skipMissingProperties: true }))
-    dto: UpdateSuccessStoryDto,
-    @UploadedFile() file?: any,
-    @Req() req?: any,
-  ): Promise<SuccessStory> {
-    const payload: any = { ...dto };
-
-    const uploadFile = file || req?.file;
-    if (uploadFile) {
-      payload.imageUrl = await this.cloudinaryService.uploadImage(uploadFile, 'success-stories');
-    }
-
-    return this.successStoriesService.update(id, payload);
+  async update(@Param('id') id: string, @Body() updateSuccessStoryDto: UpdateSuccessStoryDto): Promise<SuccessStory> {
+    return this.successStoriesService.update(id, updateSuccessStoryDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete a success story' })
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     return this.successStoriesService.remove(id);
   }

@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { SuccessStoriesController } from './success-stories.controller';
 import { SuccessStoriesService } from './success-stories.service';
 import { SuccessStory, SuccessStorySchema } from './schemas/success-story.schema';
-import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -12,5 +12,6 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
   ],
   controllers: [SuccessStoriesController],
   providers: [SuccessStoriesService],
+  exports: [SuccessStoriesService],
 })
 export class SuccessStoriesModule {}

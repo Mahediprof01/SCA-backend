@@ -11,11 +11,9 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
-  BadRequestException,
-  ValidationPipe,
-  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import {
   ApiTags,
   ApiOperation,
@@ -39,12 +37,8 @@ export class UniversitiesController {
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  /**
-   * Create a new university
-   */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({ summary: 'Create a new university' })
   @ApiResponse({
     status: 201,
@@ -52,42 +46,22 @@ export class UniversitiesController {
     type: University,
   })
   @ApiBadRequestResponse({ description: 'Invalid input' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   async create(
-    @Body(new ValidationPipe({ transform: true, skipMissingProperties: true })) createUniversityDto: CreateUniversityDto,
-    @UploadedFile() file?: any,
+    @Body() createUniversityDto: CreateUniversityDto,
+    @UploadedFile() image?: { mimetype: string; buffer: Buffer },
   ): Promise<University> {
-    let imageUrl: string | undefined;
-
-    // Handle the case where file was parsed as empty object {} into the DTO body
-    if (createUniversityDto.image && typeof createUniversityDto.image === 'object' && Object.keys(createUniversityDto.image).length === 0) {
-      delete (createUniversityDto as any).image;
+    if (image) {
+      createUniversityDto.image = `data:${image.mimetype};base64,${image.buffer.toString('base64')}`;
     }
-
-    // Upload image to Cloudinary if provided
-    if (file) {
-      imageUrl = await this.cloudinaryService.uploadImage(
-        file,
-        'universities',
-      );
-    }
-
-    // If image URL is provided in body and no file, use that
-    if (!imageUrl && createUniversityDto.image && typeof createUniversityDto.image === 'string') {
-      imageUrl = createUniversityDto.image;
-    }
-
-    // Create payload with uploaded image URL
-    const payload: any = {
-      ...createUniversityDto,
-      image: imageUrl,
-    };
-
-    return this.universitiesService.create(payload);
+    return this.universitiesService.create(createUniversityDto);
   }
 
-  /**
-   * Get university statistics
-   */
   @Get('stats/overview')
   @ApiOperation({ summary: 'Get university statistics' })
   @ApiResponse({
@@ -108,9 +82,6 @@ export class UniversitiesController {
     return this.universitiesService.getStatistics();
   }
 
-  /**
-   * Get all active universities (public endpoint, no pagination)
-   */
   @Get('public')
   @ApiOperation({ summary: 'Get all active universities for public site' })
   @ApiResponse({
@@ -121,9 +92,6 @@ export class UniversitiesController {
     return this.universitiesService.findAllActive();
   }
 
-  /**
-   * Get all universities with pagination and filtering
-   */
   @Get()
   @ApiOperation({ summary: 'Get all universities with pagination and filtering' })
   @ApiQuery({
@@ -168,9 +136,6 @@ export class UniversitiesController {
     return this.universitiesService.findAll(status, country, search, page, limit);
   }
 
-  /**
-   * Get a single university by ID
-   */
   @Get(':id')
   @ApiOperation({ summary: 'Get a single university by ID' })
   @ApiParam({
@@ -188,11 +153,7 @@ export class UniversitiesController {
     return this.universitiesService.findOne(id);
   }
 
-  /**
-   * Update a university
-   */
   @Put(':id')
-  @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({ summary: 'Update a university' })
   @ApiParam({
     name: 'id',
@@ -206,41 +167,23 @@ export class UniversitiesController {
   })
   @ApiNotFoundResponse({ description: 'University not found' })
   @ApiBadRequestResponse({ description: 'Invalid input' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   async update(
     @Param('id') id: string,
-    @Body(new ValidationPipe({ transform: true, skipMissingProperties: true })) updateUniversityDto: UpdateUniversityDto,
-    @UploadedFile() file?: any,
-    @Req() req?: any,
+    @Body() updateUniversityDto: UpdateUniversityDto,
+    @UploadedFile() image?: { mimetype: string; buffer: Buffer },
   ): Promise<University> {
-    const payload: any = { ...updateUniversityDto };
-
-    // Handle the case where file was parsed as empty object {} into the DTO body
-    if (updateUniversityDto.image && typeof updateUniversityDto.image === 'object' && Object.keys(updateUniversityDto.image).length === 0) {
-      delete payload.image;
+    if (image) {
+      updateUniversityDto.image = `data:${image.mimetype};base64,${image.buffer.toString('base64')}`;
     }
-
-    // Try using req.file if @UploadedFile() didn't work
-    const uploadFile = file || req?.file;
-    
-    // Only update image if we have a new file to upload
-    if (uploadFile) {
-      const imageUrl = await this.cloudinaryService.uploadImage(
-        uploadFile,
-        'universities',
-      );
-      payload.image = imageUrl;
-    } else if (payload.image && typeof payload.image === 'string') {
-      // If no file but explicit image URL provided in DTO, use it
-    } else {
-      delete payload.image;
-    }
-
-    return this.universitiesService.update(id, payload);
+    return this.universitiesService.update(id, updateUniversityDto);
   }
 
-  /**
-   * Delete a university
-   */
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a university' })

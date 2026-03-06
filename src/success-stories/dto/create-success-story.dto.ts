@@ -1,16 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsEnum,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateSuccessStoryDto {
   @ApiProperty({ enum: ['image', 'video'], example: 'image' })
   @IsEnum(['image', 'video'])
   @IsNotEmpty()
-  type!: string;
+  type!: 'image' | 'video';
 
   @ApiProperty({ example: 'Visa Approved!', required: false })
   @IsString()
@@ -35,5 +30,5 @@ export class CreateSuccessStoryDto {
   @ApiProperty({ enum: ['active', 'inactive'], required: false })
   @IsEnum(['active', 'inactive'])
   @IsOptional()
-  status?: string;
+  status?: 'active' | 'inactive';
 }

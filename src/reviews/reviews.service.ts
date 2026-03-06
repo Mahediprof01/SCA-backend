@@ -1,19 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Review } from './schemas/review.schema';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { Review } from './schemas/review.schema';
 
 @Injectable()
 export class ReviewsService {
-  constructor(
-    @InjectModel(Review.name) private reviewModel: Model<Review>,
-  ) {}
+  constructor(@InjectModel(Review.name) private readonly reviewModel: Model<Review>) {}
 
   async create(createReviewDto: CreateReviewDto): Promise<Review> {
     const review = new this.reviewModel(createReviewDto);
-    return await review.save();
+    return review.save();
   }
 
   async findAll(
@@ -24,9 +22,7 @@ export class ReviewsService {
   ): Promise<{ data: Review[]; total: number; page: number; limit: number }> {
     const query: any = {};
 
-    if (status) {
-      query.status = status;
-    }
+    if (status) query.status = status;
 
     if (search) {
       query.$or = [
@@ -36,23 +32,23 @@ export class ReviewsService {
       ];
     }
 
-    const skip = (page - 1) * limit;
+    const safePage = Number(page) > 0 ? Number(page) : 1;
+    const safeLimit = Number(limit) > 0 ? Number(limit) : 10;
+    const skip = (safePage - 1) * safeLimit;
+
     const total = await this.reviewModel.countDocuments(query);
     const data = await this.reviewModel
       .find(query)
       .skip(skip)
-      .limit(limit)
+      .limit(safeLimit)
       .sort({ createdAt: -1 })
       .exec();
 
-    return { data, total, page, limit };
+    return { data, total, page: safePage, limit: safeLimit };
   }
 
   async findAllActive(): Promise<Review[]> {
-    return this.reviewModel
-      .find({ status: 'active' })
-      .sort({ createdAt: -1 })
-      .exec();
+    return this.reviewModel.find({ status: 'active' }).sort({ createdAt: -1 }).exec();
   }
 
   async findOne(id: string): Promise<Review> {
@@ -65,10 +61,7 @@ export class ReviewsService {
 
   async update(id: string, updateReviewDto: UpdateReviewDto): Promise<Review> {
     const review = await this.reviewModel
-      .findByIdAndUpdate(id, updateReviewDto, {
-        new: true,
-        runValidators: true,
-      })
+      .findByIdAndUpdate(id, updateReviewDto, { new: true, runValidators: true })
       .exec();
 
     if (!review) {
@@ -95,12 +88,20 @@ export class ReviewsService {
     const active = await this.reviewModel.countDocuments({ status: 'active' });
     const inactive = await this.reviewModel.countDocuments({ status: 'inactive' });
 
-    const ratingResult = await this.reviewModel.aggregate([
-      { $match: { status: 'active' } },
-      { $group: { _id: null, avg: { $avg: '$rating' } } },
+    const rating = await this.reviewModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: '$rating' },
+        },
+      },
     ]);
-    const averageRating = ratingResult.length > 0 ? Math.round(ratingResult[0].avg * 10) / 10 : 0;
 
-    return { total, active, inactive, averageRating };
+    return {
+      total,
+      active,
+      inactive,
+      averageRating: Number((rating[0]?.averageRating ?? 0).toFixed(1)),
+    };
   }
 }
