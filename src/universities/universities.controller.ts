@@ -10,6 +10,9 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -41,9 +44,19 @@ export class UniversitiesController {
     type: University,
   })
   @ApiBadRequestResponse({ description: 'Invalid input' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   async create(
     @Body() createUniversityDto: CreateUniversityDto,
+    @UploadedFile() image?: { mimetype: string; buffer: Buffer },
   ): Promise<University> {
+    if (image) {
+      createUniversityDto.image = `data:${image.mimetype};base64,${image.buffer.toString('base64')}`;
+    }
     return this.universitiesService.create(createUniversityDto);
   }
 
@@ -167,10 +180,20 @@ export class UniversitiesController {
   })
   @ApiNotFoundResponse({ description: 'University not found' })
   @ApiBadRequestResponse({ description: 'Invalid input' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   async update(
     @Param('id') id: string,
     @Body() updateUniversityDto: UpdateUniversityDto,
+    @UploadedFile() image?: { mimetype: string; buffer: Buffer },
   ): Promise<University> {
+    if (image) {
+      updateUniversityDto.image = `data:${image.mimetype};base64,${image.buffer.toString('base64')}`;
+    }
     return this.universitiesService.update(id, updateUniversityDto);
   }
 
