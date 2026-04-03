@@ -1,54 +1,59 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import { CreateSuccessStoryDto } from './dto/create-success-story.dto';
 import { UpdateSuccessStoryDto } from './dto/update-success-story.dto';
-import { SuccessStory } from './schemas/success-story.schema';
+import { SuccessStory } from './entities/success-story.entity';
 
 @Injectable()
 export class SuccessStoriesService {
   constructor(
-    @InjectModel(SuccessStory.name)
-    private readonly successStoryModel: Model<SuccessStory>,
+    @InjectRepository(SuccessStory)
+    private readonly successStoryRepository: Repository<SuccessStory>,
   ) {}
 
   async create(dto: CreateSuccessStoryDto): Promise<SuccessStory> {
-    const story = new this.successStoryModel({
+    const story = this.successStoryRepository.create({
       ...dto,
       status: dto.status ?? 'active',
     });
-    return story.save();
+    return this.successStoryRepository.save(story);
   }
 
   async findAll(type?: string, status?: string): Promise<{ data: SuccessStory[]; total: number }> {
-    const query: Record<string, unknown> = {};
-    if (type) query.type = type;
-    if (status) query.status = status;
-    const data = await this.successStoryModel.find(query).sort({ createdAt: -1 }).exec();
+    const where: FindOptionsWhere<SuccessStory> = {};
+    if (type) where.type = type as any;
+    if (status) where.status = status as any;
+    const data = await this.successStoryRepository.find({
+      where,
+      order: { createdAt: 'DESC' },
+    });
     return { data, total: data.length };
   }
 
   async findPublic(): Promise<SuccessStory[]> {
-    return this.successStoryModel.find({ status: 'active' }).sort({ createdAt: -1 }).exec();
+    return this.successStoryRepository.find({
+      where: { status: 'active' },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findOne(id: string): Promise<SuccessStory> {
-    const story = await this.successStoryModel.findById(id).exec();
+    const story = await this.successStoryRepository.findOneBy({ id: Number(id) });
     if (!story) throw new NotFoundException(`Success story with ID ${id} not found`);
     return story;
   }
 
   async update(id: string, dto: UpdateSuccessStoryDto): Promise<SuccessStory> {
-    const story = await this.successStoryModel
-      .findByIdAndUpdate(id, dto, { new: true, runValidators: true })
-      .exec();
+    const story = await this.successStoryRepository.findOneBy({ id: Number(id) });
     if (!story) throw new NotFoundException(`Success story with ID ${id} not found`);
-    return story;
+    Object.assign(story, dto);
+    return this.successStoryRepository.save(story);
   }
 
   async remove(id: string): Promise<{ message: string }> {
-    const story = await this.successStoryModel.findByIdAndDelete(id).exec();
-    if (!story) throw new NotFoundException(`Success story with ID ${id} not found`);
+    const result = await this.successStoryRepository.delete(Number(id));
+    if (result.affected === 0) throw new NotFoundException(`Success story with ID ${id} not found`);
     return { message: 'Success story deleted successfully' };
   }
 }

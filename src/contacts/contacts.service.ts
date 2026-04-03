@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Contact } from './schemas/contact.schema';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Contact } from './entities/contact.entity';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
 
 @Injectable()
 export class ContactsService {
   constructor(
-    @InjectModel(Contact.name) private contactModel: Model<Contact>,
+    @InjectRepository(Contact) private contactRepository: Repository<Contact>,
   ) {}
 
   /**
@@ -16,10 +16,10 @@ export class ContactsService {
    */
   async create(createContactDto: CreateContactDto): Promise<Contact> {
     try {
-      const contact = new this.contactModel(createContactDto);
-      return await contact.save();
+      const contact = this.contactRepository.create(createContactDto);
+      return await this.contactRepository.save(contact);
     } catch (error: any) {
-      if (error?.code === 11000) {
+      if (error?.code === 'ER_DUP_ENTRY') {
         throw new BadRequestException('Email already exists');
       }
       throw error;
@@ -35,42 +35,35 @@ export class ContactsService {
     page: number = 1,
     limit: number = 10,
   ): Promise<{ data: Contact[]; total: number; page: number; limit: number }> {
-    const query: any = {};
+    const qb = this.contactRepository.createQueryBuilder('contact');
 
     if (status) {
-      query.status = status;
+      qb.andWhere('contact.status = :status', { status });
     }
 
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { subject: { $regex: search, $options: 'i' } },
-      ];
+      qb.andWhere(
+        '(contact.name LIKE :search OR contact.email LIKE :search OR contact.subject LIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
     const skip = (page - 1) * limit;
-    const total = await this.contactModel.countDocuments(query);
-    const data = await this.contactModel
-      .find(query)
+    const total = await qb.getCount();
+    const data = await qb
+      .orderBy('contact.createdAt', 'DESC')
       .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .exec();
+      .take(limit)
+      .getMany();
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-    };
+    return { data, total, page, limit };
   }
 
   /**
    * Get a single contact by ID
    */
   async findOne(id: string): Promise<Contact> {
-    const contact = await this.contactModel.findById(id).exec();
+    const contact = await this.contactRepository.findOneBy({ id: Number(id) });
     if (!contact) {
       throw new NotFoundException(`Contact with ID ${id} not found`);
     }
@@ -84,25 +77,20 @@ export class ContactsService {
     id: string,
     updateContactDto: UpdateContactDto,
   ): Promise<Contact> {
-    const contact = await this.contactModel
-      .findByIdAndUpdate(id, updateContactDto, {
-        new: true,
-        runValidators: true,
-      })
-      .exec();
-
+    const contact = await this.contactRepository.findOneBy({ id: Number(id) });
     if (!contact) {
       throw new NotFoundException(`Contact with ID ${id} not found`);
     }
-    return contact;
+    Object.assign(contact, updateContactDto);
+    return this.contactRepository.save(contact);
   }
 
   /**
    * Delete a contact
    */
   async remove(id: string): Promise<{ message: string }> {
-    const contact = await this.contactModel.findByIdAndDelete(id).exec();
-    if (!contact) {
+    const result = await this.contactRepository.delete(Number(id));
+    if (result.affected === 0) {
       throw new NotFoundException(`Contact with ID ${id} not found`);
     }
     return { message: 'Contact deleted successfully' };
@@ -117,14 +105,10 @@ export class ContactsService {
     pending: number;
     inactive: number;
   }> {
-    const total = await this.contactModel.countDocuments();
-    const active = await this.contactModel.countDocuments({ status: 'active' });
-    const pending = await this.contactModel.countDocuments({
-      status: 'pending',
-    });
-    const inactive = await this.contactModel.countDocuments({
-      status: 'inactive',
-    });
+    const total = await this.contactRepository.count();
+    const active = await this.contactRepository.count({ where: { status: 'active' } });
+    const pending = await this.contactRepository.count({ where: { status: 'pending' } });
+    const inactive = await this.contactRepository.count({ where: { status: 'inactive' } });
 
     return { total, active, pending, inactive };
   }

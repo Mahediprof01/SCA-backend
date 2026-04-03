@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { SuccessStoriesController } from './success-stories.controller';
 import { SuccessStoriesService } from './success-stories.service';
-import { SuccessStory, SuccessStorySchema } from './schemas/success-story.schema';
+import { SuccessStory } from './entities/success-story.entity';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: SuccessStory.name, schema: SuccessStorySchema }]),
+    TypeOrmModule.forFeature([SuccessStory]),
     CloudinaryModule,
   ],
   controllers: [SuccessStoriesController],

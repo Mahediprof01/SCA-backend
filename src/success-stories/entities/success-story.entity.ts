@@ -1,38 +1,54 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { Document } from 'mongoose';
 
-@Schema({ timestamps: true })
-export class SuccessStory extends Document {
+@Entity('success_stories')
+export class SuccessStory {
+  @ApiProperty({ example: 1, description: 'Auto-generated ID' })
+  @PrimaryGeneratedColumn()
+  id!: number;
+
   @ApiProperty({ enum: ['image', 'video'], example: 'image' })
-  @Prop({ enum: ['image', 'video'], required: true })
+  @Column({
+    type: 'enum',
+    enum: ['image', 'video'],
+  })
   type!: 'image' | 'video';
 
   @ApiProperty({ example: 'Visa Approved!', required: false })
-  @Prop({ trim: true })
+  @Column({ length: 255, nullable: true })
   title?: string;
 
   @ApiProperty({ example: 'Student got visa to study in South Korea.', required: false })
-  @Prop({ trim: true })
+  @Column({ type: 'text', nullable: true })
   description?: string;
 
   @ApiProperty({ example: 'https://res.cloudinary.com/...', required: false })
-  @Prop()
+  @Column({ type: 'longtext', nullable: true })
   imageUrl?: string;
 
   @ApiProperty({ example: 'https://www.youtube.com/watch?v=...', required: false })
-  @Prop()
+  @Column({ length: 500, nullable: true })
   videoUrl?: string;
 
   @ApiProperty({ enum: ['active', 'inactive'], example: 'active' })
-  @Prop({ enum: ['active', 'inactive'], default: 'active' })
+  @Column({
+    type: 'enum',
+    enum: ['active', 'inactive'],
+    default: 'active',
+  })
   status!: 'active' | 'inactive';
 
   @ApiProperty()
+  @CreateDateColumn()
   createdAt!: Date;
 
   @ApiProperty()
+  @UpdateDateColumn()
   updatedAt!: Date;
 }
-
-export const SuccessStorySchema = SchemaFactory.createForClass(SuccessStory);

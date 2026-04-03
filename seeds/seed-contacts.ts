@@ -1,20 +1,7 @@
-import mongoose from 'mongoose';
+import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
-
-const contactSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  phone: { type: String, required: true },
-  subject: { type: String, required: true },
-  message: { type: String, required: true },
-  status: { type: String, enum: ['active', 'inactive', 'pending'], default: 'pending' },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-});
-
-const Contact = mongoose.model('Contact', contactSchema);
 
 const seedContacts = [
   {
@@ -111,34 +98,38 @@ const seedContacts = [
 
 async function seed() {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sca_database';
+    const dataSource = new DataSource({
+      type: 'mysql',
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 3306,
+      username: process.env.DB_USERNAME || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_DATABASE || 'sca_database',
+    });
 
-    console.log('🌱 Connecting to MongoDB...');
-    await mongoose.connect(mongoUri);
-    console.log('✅ Connected to MongoDB');
+    console.log('🌱 Connecting to MySQL...');
+    await dataSource.initialize();
+    console.log('✅ Connected to MySQL');
 
     console.log('🧹 Clearing existing contacts...');
-    await Contact.deleteMany({});
-    console.log('✅ Cleared contacts collection');
+    await dataSource.query('DELETE FROM contacts');
+    console.log('✅ Cleared contacts table');
 
     console.log('📝 Seeding contacts...');
-    const result = await Contact.insertMany(seedContacts);
-    console.log(`✅ Successfully seeded ${result.length} contacts`);
+    for (const contact of seedContacts) {
+      await dataSource.query(
+        'INSERT INTO contacts (name, email, phone, subject, message, status) VALUES (?, ?, ?, ?, ?, ?)',
+        [contact.name, contact.email, contact.phone, contact.subject, contact.message, contact.status],
+      );
+    }
+    console.log(`✅ Successfully seeded ${seedContacts.length} contacts`);
 
-    // Display seeded data
-    const contacts = await Contact.find();
+    const contacts = await dataSource.query('SELECT name, email, subject, status FROM contacts');
     console.log('\n📊 Seeded Contacts:');
-    console.table(
-      contacts.map((c) => ({
-        Name: c.name,
-        Email: c.email,
-        Subject: c.subject,
-        Status: c.status,
-      })),
-    );
+    console.table(contacts);
 
-    await mongoose.disconnect();
-    console.log('\n✅ Seed completed and disconnected from MongoDB');
+    await dataSource.destroy();
+    console.log('\n✅ Seed completed and disconnected from MySQL');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error);

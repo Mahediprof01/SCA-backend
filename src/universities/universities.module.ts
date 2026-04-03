@@ -1,15 +1,13 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { UniversitiesController } from './universities.controller';
 import { UniversitiesService } from './universities.service';
-import { University, UniversitySchema } from './schemas/university.schema';
+import { University } from './entities/university.entity';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: University.name, schema: UniversitySchema },
-    ]),
+    TypeOrmModule.forFeature([University]),
     CloudinaryModule,
   ],
   controllers: [UniversitiesController],

@@ -1,28 +1,37 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
-@Schema({ timestamps: true })
-export class Consultation extends Document {
+@Entity('consultations')
+export class Consultation {
+  @ApiProperty({ example: 1, description: 'Auto-generated ID' })
+  @PrimaryGeneratedColumn()
+  id!: number;
+
   @ApiProperty({
     example: 'John Doe',
     description: 'Full name of the person requesting consultation',
   })
-  @Prop({ required: true })
+  @Column({ length: 100 })
   name!: string;
 
   @ApiProperty({
     example: 'john@example.com',
     description: 'Email address',
   })
-  @Prop({ required: true })
+  @Column({ length: 255 })
   email!: string;
 
   @ApiProperty({
     example: '+8801306890908',
     description: 'Phone number in international format',
   })
-  @Prop({ required: true })
+  @Column({ length: 50 })
   phone!: string;
 
   @ApiProperty({
@@ -30,7 +39,8 @@ export class Consultation extends Document {
     example: 'pending',
     description: 'Status of the consultation request',
   })
-  @Prop({
+  @Column({
+    type: 'enum',
     enum: ['pending', 'contacted', 'completed', 'cancelled'],
     default: 'pending',
   })
@@ -40,13 +50,13 @@ export class Consultation extends Document {
     example: '2024-01-15T10:30:00.000Z',
     description: 'Date the consultation was created',
   })
+  @CreateDateColumn()
   createdAt!: Date;
 
   @ApiProperty({
     example: '2024-01-15T10:30:00.000Z',
     description: 'Date the consultation was last updated',
   })
+  @UpdateDateColumn()
   updatedAt!: Date;
 }
-
-export const ConsultationSchema = SchemaFactory.createForClass(Consultation);

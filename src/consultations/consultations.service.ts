@@ -3,11 +3,11 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Like } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
-import { Consultation } from './schemas/consultation.schema';
+import { Consultation } from './entities/consultation.entity';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 
@@ -16,17 +16,16 @@ export class ConsultationsService {
   private readonly logger = new Logger(ConsultationsService.name);
 
   constructor(
-    @InjectModel(Consultation.name)
-    private consultationModel: Model<Consultation>,
+    @InjectRepository(Consultation)
+    private consultationRepository: Repository<Consultation>,
     private configService: ConfigService,
   ) {}
-
 
   async create(
     createConsultationDto: CreateConsultationDto,
   ): Promise<Consultation> {
-    const consultation = new this.consultationModel(createConsultationDto);
-    const saved = await consultation.save();
+    const consultation = this.consultationRepository.create(createConsultationDto);
+    const saved = await this.consultationRepository.save(consultation);
 
     this.sendNotificationEmail(saved).catch((err) =>
       this.logger.error('Failed to send consultation notification email', err),
@@ -49,28 +48,26 @@ export class ConsultationsService {
     page: number;
     limit: number;
   }> {
-    const query: any = {};
+    const qb = this.consultationRepository.createQueryBuilder('consultation');
 
     if (status) {
-      query.status = status;
+      qb.andWhere('consultation.status = :status', { status });
     }
 
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-      ];
+      qb.andWhere(
+        '(consultation.name LIKE :search OR consultation.email LIKE :search OR consultation.phone LIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
     const skip = (page - 1) * limit;
-    const total = await this.consultationModel.countDocuments(query);
-    const data = await this.consultationModel
-      .find(query)
+    const total = await qb.getCount();
+    const data = await qb
+      .orderBy('consultation.createdAt', 'DESC')
       .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .exec();
+      .take(limit)
+      .getMany();
 
     return { data, total, page, limit };
   }
@@ -79,7 +76,7 @@ export class ConsultationsService {
    * Get a single consultation by ID
    */
   async findOne(id: string): Promise<Consultation> {
-    const consultation = await this.consultationModel.findById(id).exec();
+    const consultation = await this.consultationRepository.findOneBy({ id: Number(id) });
     if (!consultation) {
       throw new NotFoundException(`Consultation with ID ${id} not found`);
     }
@@ -93,27 +90,20 @@ export class ConsultationsService {
     id: string,
     updateConsultationDto: UpdateConsultationDto,
   ): Promise<Consultation> {
-    const consultation = await this.consultationModel
-      .findByIdAndUpdate(id, updateConsultationDto, {
-        new: true,
-        runValidators: true,
-      })
-      .exec();
-
+    const consultation = await this.consultationRepository.findOneBy({ id: Number(id) });
     if (!consultation) {
       throw new NotFoundException(`Consultation with ID ${id} not found`);
     }
-    return consultation;
+    Object.assign(consultation, updateConsultationDto);
+    return this.consultationRepository.save(consultation);
   }
 
   /**
    * Delete a consultation
    */
   async remove(id: string): Promise<{ message: string }> {
-    const consultation = await this.consultationModel
-      .findByIdAndDelete(id)
-      .exec();
-    if (!consultation) {
+    const result = await this.consultationRepository.delete(Number(id));
+    if (result.affected === 0) {
       throw new NotFoundException(`Consultation with ID ${id} not found`);
     }
     return { message: 'Consultation deleted successfully' };
@@ -129,19 +119,11 @@ export class ConsultationsService {
     completed: number;
     cancelled: number;
   }> {
-    const total = await this.consultationModel.countDocuments();
-    const pending = await this.consultationModel.countDocuments({
-      status: 'pending',
-    });
-    const contacted = await this.consultationModel.countDocuments({
-      status: 'contacted',
-    });
-    const completed = await this.consultationModel.countDocuments({
-      status: 'completed',
-    });
-    const cancelled = await this.consultationModel.countDocuments({
-      status: 'cancelled',
-    });
+    const total = await this.consultationRepository.count();
+    const pending = await this.consultationRepository.count({ where: { status: 'pending' } });
+    const contacted = await this.consultationRepository.count({ where: { status: 'contacted' } });
+    const completed = await this.consultationRepository.count({ where: { status: 'completed' } });
+    const cancelled = await this.consultationRepository.count({ where: { status: 'cancelled' } });
 
     return { total, pending, contacted, completed, cancelled };
   }

@@ -26,7 +26,7 @@ import {
 import { UniversitiesService } from './universities.service';
 import { CreateUniversityDto } from './dto/create-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
-import { University } from './schemas/university.schema';
+import { University } from './entities/university.entity';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @ApiTags('Universities')

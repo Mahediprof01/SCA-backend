@@ -16,7 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CreateSuccessStoryDto } from './dto/create-success-story.dto';
 import { UpdateSuccessStoryDto } from './dto/update-success-story.dto';
-import { SuccessStory } from './schemas/success-story.schema';
+import { SuccessStory } from './entities/success-story.entity';
 import { SuccessStoriesService } from './success-stories.service';
 
 @Controller('success-stories')

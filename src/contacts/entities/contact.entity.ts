@@ -1,42 +1,51 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
-@Schema({ timestamps: true })
-export class Contact extends Document {
+@Entity('contacts')
+export class Contact {
+  @ApiProperty({ example: 1, description: 'Auto-generated ID' })
+  @PrimaryGeneratedColumn()
+  id!: number;
+
   @ApiProperty({
     example: 'John Doe',
     description: 'Full name of the contact',
   })
-  @Prop({ required: true })
+  @Column({ length: 100 })
   name!: string;
 
   @ApiProperty({
     example: 'john@example.com',
     description: 'Email address',
   })
-  @Prop({ required: true, unique: true })
+  @Column({ length: 255, unique: true })
   email!: string;
 
   @ApiProperty({
     example: '+1 (555) 123-4567',
     description: 'Phone number',
   })
-  @Prop({ required: true })
+  @Column({ length: 50 })
   phone!: string;
 
   @ApiProperty({
     example: 'Inquiry about UK Universities',
     description: 'Subject of the contact',
   })
-  @Prop({ required: true })
+  @Column({ length: 200 })
   subject!: string;
 
   @ApiProperty({
     example: 'I am interested in studying Computer Science...',
     description: 'Full message content',
   })
-  @Prop({ required: true })
+  @Column({ type: 'text' })
   message!: string;
 
   @ApiProperty({
@@ -44,7 +53,7 @@ export class Contact extends Document {
     description: 'CGPA of the applicant',
     required: false,
   })
-  @Prop({ required: false })
+  @Column({ length: 10, nullable: true })
   cgpa?: string;
 
   @ApiProperty({
@@ -52,20 +61,18 @@ export class Contact extends Document {
     example: 'active',
     description: 'Status of the contact',
   })
-  @Prop({ enum: ['active', 'inactive', 'pending'], default: 'pending' })
+  @Column({
+    type: 'enum',
+    enum: ['active', 'inactive', 'pending'],
+    default: 'pending',
+  })
   status!: string;
 
-  @ApiProperty({
-    description: 'Creation timestamp',
-  })
-  @Prop()
+  @ApiProperty({ description: 'Creation timestamp' })
+  @CreateDateColumn()
   createdAt!: Date;
 
-  @ApiProperty({
-    description: 'Last update timestamp',
-  })
-  @Prop()
+  @ApiProperty({ description: 'Last update timestamp' })
+  @UpdateDateColumn()
   updatedAt!: Date;
 }
-
-export const ContactSchema = SchemaFactory.createForClass(Contact);

@@ -1,20 +1,7 @@
-import mongoose from 'mongoose';
+import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
-
-const reviewSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    university: { type: String, required: true },
-    quote: { type: String, required: true },
-    rating: { type: Number, required: true, min: 1, max: 5, default: 5 },
-    status: { type: String, enum: ['active', 'inactive'], default: 'active' },
-  },
-  { timestamps: true },
-);
-
-const Review = mongoose.model('Review', reviewSchema);
 
 const seedReviews = [
   {
@@ -52,33 +39,38 @@ const seedReviews = [
 ];
 
 async function seed() {
-  const mongoUri =
-    process.env.MONGODB_URI || 'mongodb://localhost:27017/sca_database';
-
   try {
-    await mongoose.connect(mongoUri);
-    console.log('🔗 Connected to MongoDB:', mongoUri);
+    const dataSource = new DataSource({
+      type: 'mysql',
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 3306,
+      username: process.env.DB_USERNAME || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_DATABASE || 'sca_database',
+    });
+
+    await dataSource.initialize();
+    console.log('🔗 Connected to MySQL');
 
     // Clear existing reviews
-    const deleted = await Review.deleteMany({});
-    console.log(`🗑️  Cleared ${deleted.deletedCount} existing reviews`);
+    const deleted = await dataSource.query('DELETE FROM reviews');
+    console.log(`🗑️  Cleared existing reviews`);
 
     // Insert seed reviews
-    const reviews = await Review.insertMany(seedReviews);
-    console.log(`✅ Seeded ${reviews.length} reviews`);
+    for (const review of seedReviews) {
+      await dataSource.query(
+        'INSERT INTO reviews (name, university, quote, rating, status) VALUES (?, ?, ?, ?, ?)',
+        [review.name, review.university, review.quote, review.rating, review.status],
+      );
+    }
+    console.log(`✅ Seeded ${seedReviews.length} reviews`);
 
+    const reviews = await dataSource.query('SELECT name, university, rating, status FROM reviews');
     console.log('\n📊 Seeded Reviews:');
-    console.table(
-      reviews.map((r) => ({
-        Name: r.name,
-        University: r.university,
-        Rating: r.rating,
-        Status: r.status,
-      })),
-    );
+    console.table(reviews);
 
-    await mongoose.disconnect();
-    console.log('\n✅ Seed completed and disconnected from MongoDB');
+    await dataSource.destroy();
+    console.log('\n✅ Seed completed and disconnected from MySQL');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error);

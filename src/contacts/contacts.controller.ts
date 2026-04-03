@@ -22,7 +22,7 @@ import {
 import { ContactsService } from './contacts.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
-import { Contact } from './schemas/contact.schema';
+import { Contact } from './entities/contact.entity';
 
 @ApiTags('Contacts')
 @Controller('contacts')

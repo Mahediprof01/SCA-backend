@@ -22,7 +22,7 @@ import {
 import { ConsultationsService } from './consultations.service';
 import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
-import { Consultation } from './schemas/consultation.schema';
+import { Consultation } from './entities/consultation.entity';
 
 @ApiTags('Consultations')
 @Controller('consultations')
